@@ -221,3 +221,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local environment and Synapse account configuration
+.env.*
+.synapse/
