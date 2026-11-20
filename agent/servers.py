@@ -37,6 +37,19 @@ class ServerSpec:
         return self.path / GENERATED_NAME
 
 
+def is_main_tree() -> bool:
+    """False while <KEY>_DIR overrides point the scripts at an isolated copy of the systems."""
+    return not any(os.environ.get(f"{key.upper()}_DIR") for key in load_exposure())
+
+
+def shown(path: Path) -> str:
+    """A path for messages: relative to the repository when possible."""
+    try:
+        return Path(path).resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def load_exposure() -> dict:
     return json.loads(EXPOSURE_FILE.read_text(encoding="utf-8"))
 
@@ -57,12 +70,14 @@ def load_servers(mode: str = "local") -> list[ServerSpec]:
     specs: list[ServerSpec] = []
     hosted = json.loads(HOSTED_FILE.read_text(encoding="utf-8")) if HOSTED_FILE.exists() else {}
     for key, cfg in load_exposure().items():
+        # <KEY>_DIR and <KEY>_PORT point every script at an isolated copy of a system
+        # (see eval/instance.py); without them the committed systems on their usual ports are used.
         spec = ServerSpec(
             key=key,
             namespace=cfg["namespace"],
             server_name=cfg["server_name"],
-            path=ROOT / cfg["path"],
-            port=int(cfg["port"]),
+            path=Path(os.environ.get(f"{key.upper()}_DIR") or ROOT / cfg["path"]),
+            port=int(os.environ.get(f"{key.upper()}_PORT") or cfg["port"]),
         )
         if mode == "local":
             spec.command = sys.executable
@@ -86,6 +101,14 @@ def load_servers(mode: str = "local") -> list[ServerSpec]:
             raise SystemExit(f"unknown mode {mode!r} (use local or hosted)")
         specs.append(spec)
     return specs
+
+
+def run_cli(main) -> None:
+    """Run a command-line entry point. Ctrl+C ends it with exit code 130 instead of a traceback."""
+    try:
+        main()
+    except KeyboardInterrupt:
+        raise SystemExit(130)
 
 
 def utf8_stdio() -> None:

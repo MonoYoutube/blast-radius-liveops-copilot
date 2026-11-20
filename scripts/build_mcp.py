@@ -15,7 +15,8 @@ Verified against Synapse CLI 0.1.9:
   which needs no key and no running Ollama.
 * A local rebuild does not overwrite synapse_auto_server.py: it writes
   synapse_auto_server_2.py next to it. We park the old file during the build so
-  the MCP client config keeps pointing at one stable path.
+  the MCP client config keeps pointing at one stable path, and put it back if
+  the build fails or is interrupted.
 * After a partial rescan the tools of re-parsed files move to the end of the
   generated file. `--fresh` deletes .synapse/surface_cache.json first (the CLI
   documents this as always safe), which gives byte-identical output for
@@ -34,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from agent.servers import GENERATED_NAME, HOSTED_FILE, ROOT, endpoints_for, load_dotenv, load_servers, scrub, utf8_stdio  # noqa: E402
+from agent.servers import GENERATED_NAME, HOSTED_FILE, ROOT, endpoints_for, is_main_tree, load_dotenv, load_servers, run_cli, scrub, shown, utf8_stdio  # noqa: E402
 
 
 def synapse_command() -> list[str]:
@@ -89,12 +90,19 @@ def build_one(spec, mode: str, discover: bool, include_live: bool, smart_names: 
     env = {**os.environ, "SYNAPSE_TELEMETRY": os.environ.get("SYNAPSE_TELEMETRY", "0")}
     if mode == "hosted" and not (spec.path / ".synapse" / "config.json").exists():
         # A hosted build needs an initialised project; the key comes from SYNAPSE_API_KEY or ~/.synapse.
-        print(f"\n[{spec.key}] $ cd {spec.path.relative_to(ROOT)} && synapse --yes init")
+        print(f"\n[{spec.key}] $ cd {shown(spec.path)} && synapse --yes init")
         init = subprocess.run(synapse_command() + ["--yes", "init"], cwd=spec.path, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if init.returncode != 0:
             raise SystemExit(f"synapse init failed for {spec.key} (exit {init.returncode}). Output:\n{scrub((init.stdout or '') + (init.stderr or ''))}")
-    print(f"\n[{spec.key}] $ cd {spec.path.relative_to(ROOT)} && {show(printable)}")
-    proc = subprocess.run(cmd, cwd=spec.path, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    print(f"\n[{spec.key}] $ cd {shown(spec.path)} && {show(printable)}")
+    try:
+        proc = subprocess.run(cmd, cwd=spec.path, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except BaseException:
+        # Ctrl+C, or the CLI could not be started: the build did not finish, so the previous server goes back.
+        if parked.exists():
+            parked.replace(spec.generated_file)
+            print(f"    build interrupted: kept the previous {GENERATED_NAME}")
+        raise
     output = scrub((proc.stdout or "") + (proc.stderr or ""))
     for line in output.splitlines():
         if any(mark in line for mark in ("Discover", "Extracted", "Detected", "Ready", "Output", "Tool ", "rror", "✖")):
@@ -114,7 +122,7 @@ def build_one(spec, mode: str, discover: bool, include_live: bool, smart_names: 
             raise SystemExit(f"{GENERATED_NAME} was not written for {spec.key}")
         tools = re.findall(r'@mcp\.tool\(name="([^"]+)"', spec.generated_file.read_text(encoding="utf-8"))
         result["tools"] = tools
-        print(f"    -> {spec.generated_file.relative_to(ROOT)}: {len(tools)} tools: {', '.join(tools)}")
+        print(f"    -> {shown(spec.generated_file)}: {len(tools)} tools: {', '.join(tools)}")
     else:
         match = re.search(r'"SYNAPSE_SERVER_ID"\s*:\s*"([0-9a-fA-F-]{8,})"', output)
         if not match:
@@ -127,6 +135,8 @@ def build_one(spec, mode: str, discover: bool, include_live: bool, smart_names: 
 
 def write_client_config(mode: str) -> None:
     """Write a ready-to-paste config for Claude Desktop / Cursor (machine-specific, git-ignored)."""
+    if not is_main_tree():
+        return          # an isolated instance must not overwrite the config that points at the real systems
     servers = {}
     for spec in load_servers(mode):
         env = dict(spec.env)
@@ -150,6 +160,8 @@ def main() -> None:
 
     utf8_stdio()
     load_dotenv()
+    if args.mode == "hosted" and not is_main_tree():
+        raise SystemExit("An isolated copy (<KEY>_DIR is set) is built locally only: a hosted build would change the server in the Synapse account.")
     hosted_ids = json.loads(HOSTED_FILE.read_text(encoding="utf-8")) if HOSTED_FILE.exists() else {}
     for spec in load_servers("local"):
         if args.system not in ("all", spec.key):
@@ -163,4 +175,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_cli(main)

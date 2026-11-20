@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import sys
 import time
@@ -24,9 +25,11 @@ from typing import Callable
 
 from .llm import LLMError, make_llm
 from .mcp_hub import SEP, McpHub
-from .servers import ROOT, load_dotenv, load_servers, scrub, utf8_stdio
+from .servers import ROOT, load_dotenv, load_servers, run_cli, scrub, utf8_stdio
 
 SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.md").read_text(encoding="utf-8")
+# Saved with every run, so a recorded answer can be tied to the prompt that produced it.
+PROMPT_SHA256 = hashlib.sha256(SYSTEM_PROMPT.replace("\r\n", "\n").encode("utf-8")).hexdigest()
 READ_ONLY_PREFIXES = ("get_", "list_", "find_", "search_")
 MAX_TOOL_OUTPUT = 20_000
 EXIT_OK, EXIT_INCOMPLETE, EXIT_MODEL_ERROR = 0, 2, 3
@@ -90,7 +93,7 @@ async def answer(
     """
     started = time.time()
     run = {
-        "question": question, "mode": mode, "model": getattr(llm, "model", "?"),
+        "question": question, "mode": mode, "model": getattr(llm, "model", "?"), "system_prompt_sha256": PROMPT_SHA256,
         "steps": [], "answer": "", "completed": False, "stop_reason": "", "error": "",
         "llm_usage": [], "usage_total": {},
     }
@@ -239,4 +242,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_cli(main)

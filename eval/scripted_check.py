@@ -13,6 +13,14 @@ same calls.
 
 With --stage auto (default) the stage is detected from the tool list, but the
 list must still equal one of the two known sets exactly.
+
+    python -m eval.scripted_check --scenario partial_grant --stage live
+    python -m eval.scripted_check --scenario unrelated_ticket
+
+--scenario runs the same check on an isolated copy of both systems with changed
+data (see eval/instance.py). It starts its own APIs on free ports, so nothing
+else has to be running, and it never writes to the committed systems. With
+--stage live the copy gets the live endpoint and a `synapse build --discover`.
 """
 from __future__ import annotations
 
@@ -20,9 +28,10 @@ import argparse
 import asyncio
 import json
 import sys
+from datetime import datetime
 
 from agent.mcp_hub import McpHub
-from agent.servers import load_dotenv, load_servers, utf8_stdio
+from agent.servers import load_dotenv, load_servers, run_cli, utf8_stdio
 from eval import ground_truth
 
 INCIDENT = "INC-2026-11-18-EU2"
@@ -36,6 +45,12 @@ BASE_TOOLS = frozenset({
 })
 LIVE_TOOLS = BASE_TOOLS | {COMPENSATIONS_TOOL}
 NOT_CHARGED = "payment_failed_not_charged"
+# A ticket counts as a report of the incident when its category matches a way the game says its author was affected.
+TOPIC_OF_REASON = {"match_crash": "gameplay", "login_timeout": "gameplay", "purchase_charged_not_delivered": "billing"}
+
+
+def _ts(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 def is_player_not_found(text: str) -> bool:
@@ -55,31 +70,61 @@ def is_player_not_found(text: str) -> bool:
     return isinstance(detail, str) and detail.startswith("no player uses the e-mail")
 
 
-async def q1(hub: McpHub, incident_id: str) -> dict:
+async def incident_tickets(hub: McpHub, incident_id: str) -> tuple[dict, list[dict], list[tuple[dict, dict]]]:
+    """The incident, its affected players and every (player row, ticket summary) they wrote since it started."""
     incident = await hub.call_json("game__get_incident", {"incident_id": incident_id})
-    affected = await hub.call_json("game__list_incident_affected_players", {"incident_id": incident_id})
-    everyone = sorted(row["player_id"] for row in affected["items"])
-    empty = {"affected": everyone, "with_tickets": {}, "silent": everyone, "awaiting_first_response": []}
-    owner = {email.lower(): row["player_id"] for row in affected["items"] for email in row["emails"]}
+    affected = (await hub.call_json("game__list_incident_affected_players", {"incident_id": incident_id}))["items"]
+    owner = {email.lower(): row for row in affected for email in row["emails"]}
     if not owner:
-        return empty                     # nobody affected: there is nothing to look up in the support desk
+        return incident, affected, []    # nobody affected: there is nothing to look up in the support desk
     # Strings only: hosted Synapse tools declare every body field as a required string.
     found = await hub.call_json(
         "desk__search_tickets",
         {"requester_emails": ",".join(sorted(owner)), "created_from": incident["started_at"], "status": ""},
     )
+    return incident, affected, [(owner[ticket["requester_email"].lower()], ticket) for ticket in found["items"]]
+
+
+async def q1(hub: McpHub, incident_id: str) -> dict:
+    _, affected, rows = await incident_tickets(hub, incident_id)
+    everyone = sorted(row["player_id"] for row in affected)
     with_tickets: dict[str, list[str]] = {}
-    awaiting: list[str] = []
-    for ticket in found["items"]:
-        player_id = owner[ticket["requester_email"].lower()]
-        with_tickets.setdefault(player_id, []).append(ticket["ticket_id"])
-        if ticket["awaiting_first_response"]:
-            awaiting.append(ticket["ticket_id"])
+    for player, ticket in rows:
+        with_tickets.setdefault(player["player_id"], []).append(ticket["ticket_id"])
     return {
         "affected": everyone,
         "with_tickets": {pid: sorted(ids) for pid, ids in sorted(with_tickets.items())},
         "silent": sorted(set(everyone) - set(with_tickets)),
-        "awaiting_first_response": sorted(awaiting),
+        "awaiting_first_response": sorted(t["ticket_id"] for _, t in rows if t["awaiting_first_response"]),
+    }
+
+
+async def q1_topics(hub: McpHub, incident_id: str) -> dict:
+    """Author and time only show that an affected player wrote. What the ticket is about decides whether it reports the incident."""
+    _, _, rows = await incident_tickets(hub, incident_id)
+    about, other = [], []
+    for player, ticket in rows:
+        topics = {TOPIC_OF_REASON[reason] for reason in player["reasons"]}
+        (about if ticket["category"] in topics else other).append(ticket)
+    waiting = lambda tickets: sorted(t["ticket_id"] for t in tickets if t["awaiting_first_response"])
+    return {
+        "about_incident": sorted(t["ticket_id"] for t in about),
+        "other_topics": sorted(t["ticket_id"] for t in other),
+        "awaiting_about_incident": waiting(about),
+        "awaiting_other_topics": waiting(other),
+    }
+
+
+async def q1_moment(hub: McpHub, incident_id: str) -> dict:
+    """`awaiting_first_response` is the desk as it is now; a past moment has to be derived from the two timestamps."""
+    incident, _, rows = await incident_tickets(hub, incident_id)
+    end = _ts(incident["ended_at"])
+    return {
+        "unanswered_at_incident_end": sorted(
+            t["ticket_id"] for _, t in rows
+            if _ts(t["created_at"]) <= end and (t["first_response_at"] is None or _ts(t["first_response_at"]) > end)
+        ),
+        "awaiting_first_response_now": sorted(t["ticket_id"] for _, t in rows if t["awaiting_first_response"]),
     }
 
 
@@ -111,19 +156,24 @@ async def q2(hub: McpHub, ticket_id: str) -> dict:
 
 
 async def q2_resolution(hub: McpHub, ticket_id: str) -> dict:
-    """Needs the compensations tool: was the undelivered purchase settled later?"""
+    """Needs the compensations tool: was the undelivered purchase settled later, or was the player granted something else?"""
     base = await q2(hub, ticket_id)
-    related, settled = [], set()
+    related, other, settled = [], [], set()
     for incident_id in base["affected_by_incidents"]:
         ledger = await hub.call_json(COMPENSATIONS_TOOL, {"incident_id": incident_id})
         for row in ledger["items"]:
+            if row["player_id"] != base["player_id"]:
+                continue
             if row["related_purchase_id"] in base["undelivered_purchase_ids"]:
                 related.append(row["compensation_id"])
                 settled.add(row["related_purchase_id"])
+            else:
+                other.append(row["compensation_id"])     # e.g. a crash grant: it settles no purchase
     return {
         "player_id": base["player_id"],
         "undelivered_purchase_ids": base["undelivered_purchase_ids"],
         "related_compensation_ids": sorted(related),
+        "other_grant_ids": sorted(other),
         "still_owed_purchase_ids": sorted(set(base["undelivered_purchase_ids"]) - settled),
     }
 
@@ -140,6 +190,39 @@ async def q3(hub: McpHub, incident_id: str) -> dict:
             if pid not in compensated and any(t in first["awaiting_first_response"] for t in ids)
         ),
         "not_compensated_and_silent": sorted(set(first["silent"]) - compensated),
+    }
+
+
+async def q3_owed(hub: McpHub, incident_id: str, ledger: bool = True) -> dict:
+    """What is still owed, purchase by purchase. Only a compensation that names a purchase settles it.
+
+    With ledger=False (no compensations tool) the purchases are known and their settlement is not.
+    """
+    _, affected, rows = await incident_tickets(hub, incident_id)
+    undelivered = {p["purchase_id"]: row["player_id"] for row in affected for p in row["undelivered_purchases"]}
+    if not ledger:
+        return {"ledger_checked": False, "undelivered_purchase_ids": sorted(undelivered),
+                "settled": None, "owed": None, "owed_players_awaiting_reply": None, "grants_without_purchase": None}
+    grants = (await hub.call_json(COMPENSATIONS_TOOL, {"incident_id": incident_id}))["items"]
+    players = {row["player_id"] for row in affected}
+    settled: dict[str, list[str]] = {}
+    loose: dict[str, list[str]] = {}
+    for grant in sorted(grants, key=lambda g: g["compensation_id"]):
+        if grant["player_id"] not in players:
+            continue
+        if grant["related_purchase_id"] in undelivered:
+            settled.setdefault(grant["related_purchase_id"], []).append(grant["compensation_id"])
+        else:
+            loose.setdefault(grant["player_id"], []).append(grant["compensation_id"])
+    owed = {purchase_id: player_id for purchase_id, player_id in sorted(undelivered.items()) if purchase_id not in settled}
+    waiting = {player["player_id"] for player, ticket in rows if ticket["awaiting_first_response"]}
+    return {
+        "ledger_checked": True,
+        "undelivered_purchase_ids": sorted(undelivered),
+        "settled": dict(sorted(settled.items())),
+        "owed": owed,
+        "owed_players_awaiting_reply": sorted(set(owed.values()) & waiting),
+        "grants_without_purchase": dict(sorted(loose.items())),
     }
 
 
@@ -164,10 +247,19 @@ async def run(mode: str = "local", stage: str = "auto") -> list[tuple[str, bool,
             ("Q2 T-1047: 'charged twice' claim (false)", q2(hub, "T-1047"), ground_truth.q2("T-1047")),
             ("Q2 T-1051: 'charged twice' claim (true)", q2(hub, "T-1051"), ground_truth.q2("T-1051")),
             ("Q2 T-1045: sender unknown to the game, no player link", q2(hub, "T-1045"), ground_truth.q2("T-1045")),
+            (f"Q1 {INCIDENT}: tickets since the start, by topic", q1_topics(hub, INCIDENT), ground_truth.q1_topics(INCIDENT)),
+            (f"Q1 {INCIDENT}: unanswered at incident end vs now", q1_moment(hub, INCIDENT), ground_truth.q1_moment(INCIDENT)),
         ]
         if stage == "live" and COMPENSATIONS_TOOL in names:
-            cases.append((f"Q3 {INCIDENT}: compensations x tickets (live endpoint)", q3(hub, INCIDENT), ground_truth.q3(INCIDENT)))
-            cases.append(("Q2 T-1042: original charge vs later re-delivery (live endpoint)", q2_resolution(hub, "T-1042"), ground_truth.q2_resolution("T-1042")))
+            cases += [
+                (f"Q3 {INCIDENT}: compensations x tickets (live endpoint)", q3(hub, INCIDENT), ground_truth.q3(INCIDENT)),
+                ("Q2 T-1042: original charge vs later re-delivery (live endpoint)", q2_resolution(hub, "T-1042"), ground_truth.q2_resolution("T-1042")),
+                ("Q2 T-1043: purchase still owed whatever else was granted (live endpoint)", q2_resolution(hub, "T-1043"), ground_truth.q2_resolution("T-1043")),
+                (f"Q3 {INCIDENT}: what is still owed, purchase by purchase (live endpoint)", q3_owed(hub, INCIDENT), ground_truth.q3_owed(INCIDENT)),
+            ]
+        elif stage == "baseline":
+            cases.append((f"Q3 {INCIDENT}: undelivered purchases, settlement unknown without the ledger",
+                          q3_owed(hub, INCIDENT, ledger=False), ground_truth.q3_owed(INCIDENT, ledger=False)))
         for label, coroutine, expected in cases:
             try:
                 got = await coroutine
@@ -177,22 +269,39 @@ async def run(mode: str = "local", stage: str = "auto") -> list[tuple[str, bool,
     return results
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--mode", choices=["local", "hosted"], default="local")
-    parser.add_argument("--stage", choices=["auto", "baseline", "live"], default="auto")
-    args = parser.parse_args()
-    utf8_stdio()
-    load_dotenv()
+def report(mode: str, stage: str) -> bool:
+    """Print one PASS/FAIL line per case. True if everything passed."""
     failed = False
-    for label, passed, got, expected in asyncio.run(run(args.mode, args.stage)):
+    for label, passed, got, expected in asyncio.run(run(mode, stage)):
         print(("PASS  " if passed else "FAIL  ") + label)
         if not passed:
             failed = True
             print("   got     :", got)
             print("   expected:", expected)
-    sys.exit(1 if failed else 0)
+    return not failed
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--mode", choices=["local", "hosted"], default="local")
+    parser.add_argument("--stage", choices=["auto", "baseline", "live"], default="auto")
+    parser.add_argument("--scenario", default="", help="run on an isolated copy with changed data (python -m eval.instance lists them)")
+    args = parser.parse_args()
+    utf8_stdio()
+    load_dotenv()
+    if not args.scenario:
+        sys.exit(0 if report(args.mode, args.stage) else 1)
+    if args.mode != "local":
+        raise SystemExit("--scenario builds and runs local MCP servers in an isolated copy; use it with --mode local")
+    from eval import instance                      # imported here: the plain check needs no copy machinery
+
+    instance.check_name(args.scenario)
+    with instance.running(args.scenario, live=args.stage == "live") as copy:
+        print(f"scenario {copy.scenario}: {instance.SCENARIOS[copy.scenario][0]}")
+        print(f"isolated copy on ports {', '.join(str(port) for port in copy.ports.values())}; the committed systems are not touched\n")
+        passed = report(args.mode, args.stage)
+    sys.exit(0 if passed else 1)
 
 
 if __name__ == "__main__":
-    main()
+    run_cli(main)

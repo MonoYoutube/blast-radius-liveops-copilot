@@ -17,7 +17,9 @@ def test_scripted_check_matches_ground_truth(apis):
     results = asyncio.run(scripted_check.run("local", "baseline"))
     failures = [(label, got, expected) for label, passed, got, expected in results if not passed]
     assert not failures, failures
-    assert len(results) == 7                                  # tool list + six cross-system cases
+    assert len(results) == 10                                 # tool list + nine cross-system cases
+    labels = " | ".join(label for label, *_ in results)
+    assert "by topic" in labels and "incident end vs now" in labels and "settlement unknown without the ledger" in labels
 
 
 def test_scripted_check_goes_red_when_the_stage_is_wrong(apis):

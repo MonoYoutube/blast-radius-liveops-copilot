@@ -2,7 +2,7 @@
 import asyncio
 import json
 
-from agent.copilot import answer, exit_code, find_llm_error, is_read_only, print_step, say, tool_specs
+from agent.copilot import PROMPT_SHA256, answer, exit_code, find_llm_error, is_read_only, print_step, say, tool_specs
 from agent.llm import LLMError, ToolCall, Turn
 from agent.mcp_hub import McpHub
 from agent.servers import load_servers
@@ -45,6 +45,7 @@ def test_loop_calls_both_systems_and_returns_answer(apis):
     assert "T-1043" in llm.results[1][1]
     assert len(llm.tools) >= 10 and all(t["name"].count("__") == 1 for t in llm.tools)
     assert "only bridge" in llm.system
+    assert run["system_prompt_sha256"] == PROMPT_SHA256 and len(PROMPT_SHA256) == 64      # a saved run names its prompt
 
 
 def test_loop_reports_bad_calls_back_to_the_model(apis):

@@ -7,15 +7,22 @@ compare what the agent's tools return against these values.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-GAME = ROOT / "systems" / "game_backend" / "data" / "seed.json"
-DESK = ROOT / "systems" / "support_desk" / "data" / "seed.json"
 
 SESSION_REASONS = {"server_crash": "match_crash", "login_timeout": "login_timeout"}
 NOT_CHARGED = "payment_failed_not_charged"
+# A ticket counts as a report of the incident when its category matches a way the game says its author was affected.
+TOPIC_OF_REASON = {"match_crash": "gameplay", "login_timeout": "gameplay", "purchase_charged_not_delivered": "billing"}
+ACTIVE = ("new", "open", "pending")
+
+
+def data_file(key: str) -> Path:
+    """The data file of a system: the committed one, or the isolated copy named by <KEY>_DIR (see eval/instance.py)."""
+    return Path(os.environ.get(f"{key.upper()}_DIR") or ROOT / "systems" / key) / "data" / "seed.json"
 
 
 def _ts(value: str) -> datetime:
@@ -23,7 +30,8 @@ def _ts(value: str) -> datetime:
 
 
 def _load() -> tuple[dict, dict]:
-    return json.loads(GAME.read_text(encoding="utf-8")), json.loads(DESK.read_text(encoding="utf-8"))
+    return (json.loads(data_file("game_backend").read_text(encoding="utf-8")),
+            json.loads(data_file("support_desk").read_text(encoding="utf-8")))
 
 
 def _emails(player: dict) -> set[str]:
@@ -71,6 +79,58 @@ def q1(incident_id: str) -> dict:
     }
 
 
+def _answered_at(ticket: dict) -> str | None:
+    return next((m["at"] for m in ticket["messages"] if m["author"] == "agent"), None)
+
+
+def _incident_tickets(incident_id: str) -> tuple[dict, dict[str, set[str]], list[tuple[str, dict]]]:
+    """The incident, its affected players and every (player_id, ticket) they wrote since it started."""
+    game, desk = _load()
+    inc = next(i for i in game["incidents"] if i["incident_id"] == incident_id)
+    affected = affected_players(incident_id)
+    owner = {email: p["player_id"] for p in game["players"] if p["player_id"] in affected for email in _emails(p)}
+    rows = [
+        (owner[t["requester_email"].lower()], t) for t in desk["tickets"]
+        if t["requester_email"].lower() in owner and _ts(t["created_at"]) >= _ts(inc["started_at"])
+    ]
+    return inc, affected, rows
+
+
+def q1_topics(incident_id: str) -> dict:
+    """Of the tickets affected players wrote since the incident started: which report it, which are about something else?
+
+    Author and time only show that an affected player wrote. A ticket is a report of the incident when its
+    category matches a way the game says that player was affected (see TOPIC_OF_REASON).
+    """
+    _, affected, rows = _incident_tickets(incident_id)
+    about, other = [], []
+    for player_id, ticket in rows:
+        topics = {TOPIC_OF_REASON[reason] for reason in affected[player_id]}
+        (about if ticket["category"] in topics else other).append(ticket)
+    waiting = lambda tickets: sorted(t["ticket_id"] for t in tickets if _answered_at(t) is None and t["status"] in ACTIVE)
+    return {
+        "about_incident": sorted(t["ticket_id"] for t in about),
+        "other_topics": sorted(t["ticket_id"] for t in other),
+        "awaiting_about_incident": waiting(about),
+        "awaiting_other_topics": waiting(other),
+    }
+
+
+def q1_moment(incident_id: str) -> dict:
+    """Tickets from affected players without a first reply: when the incident ended, and in the desk as it is now."""
+    inc, _, rows = _incident_tickets(incident_id)
+    end = _ts(inc["ended_at"])
+    return {
+        "unanswered_at_incident_end": sorted(
+            t["ticket_id"] for _, t in rows
+            if _ts(t["created_at"]) <= end and (_answered_at(t) is None or _ts(_answered_at(t)) > end)
+        ),
+        "awaiting_first_response_now": sorted(
+            t["ticket_id"] for _, t in rows if _answered_at(t) is None and t["status"] in ACTIVE
+        ),
+    }
+
+
 def double_charged_orders(purchases: list[dict]) -> list[str]:
     """Orders that were charged more than once. Buying the same item under two orders is not a double charge."""
     charges: dict[str, int] = {}
@@ -101,17 +161,20 @@ def q2(ticket_id: str) -> dict:
 def q2_resolution(ticket_id: str) -> dict:
     """For a 'paid, not delivered' ticket: the original charge and any compensation granted for it later.
 
-    The purchase row keeps its original status; the compensation ledger is a separate record.
+    The purchase row keeps its original status; the compensation ledger is a separate record. Only a
+    compensation that names the purchase settles it. Anything else the player was granted is listed apart.
     """
     game, _ = _load()
     base = q2(ticket_id)
     undelivered = base.get("undelivered_purchase_ids", [])
-    related = sorted(c["compensation_id"] for c in game["compensations"] if c["related_purchase_id"] in undelivered)
-    settled = {c["related_purchase_id"] for c in game["compensations"] if c["related_purchase_id"] in undelivered}
+    ledger = [c for c in game["compensations"]
+              if c["player_id"] == base["player_id"] and c["incident_id"] in base.get("affected_by_incidents", [])]
+    settled = {c["related_purchase_id"] for c in ledger if c["related_purchase_id"] in undelivered}
     return {
         "player_id": base["player_id"],
         "undelivered_purchase_ids": undelivered,
-        "related_compensation_ids": related,
+        "related_compensation_ids": sorted(c["compensation_id"] for c in ledger if c["related_purchase_id"] in undelivered),
+        "other_grant_ids": sorted(c["compensation_id"] for c in ledger if c["related_purchase_id"] not in undelivered),
         "still_owed_purchase_ids": sorted(set(undelivered) - settled),
     }
 
@@ -134,6 +197,44 @@ def q3(incident_id: str) -> dict:
     }
 
 
+def q3_owed(incident_id: str, ledger: bool = True) -> dict:
+    """What is still owed for the incident, purchase by purchase.
+
+    A purchase that was charged and not delivered is settled only by a compensation whose related_purchase_id
+    names it. A grant for something else (a crash grant, for instance) settles no purchase, even for the same
+    player. With ledger=False this is what can be said while no tool returns compensations: the undelivered
+    purchases are known, whether they were settled is not.
+    """
+    game, _ = _load()
+    inc, affected, rows = _incident_tickets(incident_id)
+    start, end = _ts(inc["started_at"]), _ts(inc["ended_at"])
+    undelivered = {
+        p["purchase_id"]: p["player_id"] for p in game["purchases"]
+        if p["server"] == inc["server"] and p["status"] == "charged_not_delivered" and start <= _ts(p["created_at"]) <= end
+    }
+    if not ledger:
+        return {"ledger_checked": False, "undelivered_purchase_ids": sorted(undelivered),
+                "settled": None, "owed": None, "owed_players_awaiting_reply": None, "grants_without_purchase": None}
+    grants = [c for c in game["compensations"] if c["incident_id"] == incident_id and c["player_id"] in affected]
+    settled: dict[str, list[str]] = {}
+    loose: dict[str, list[str]] = {}
+    for c in sorted(grants, key=lambda c: c["compensation_id"]):
+        if c["related_purchase_id"] in undelivered:
+            settled.setdefault(c["related_purchase_id"], []).append(c["compensation_id"])
+        else:
+            loose.setdefault(c["player_id"], []).append(c["compensation_id"])
+    owed = {purchase_id: player_id for purchase_id, player_id in sorted(undelivered.items()) if purchase_id not in settled}
+    waiting = {player_id for player_id, t in rows if _answered_at(t) is None and t["status"] in ACTIVE}
+    return {
+        "ledger_checked": True,
+        "undelivered_purchase_ids": sorted(undelivered),
+        "settled": dict(sorted(settled.items())),
+        "owed": owed,
+        "owed_players_awaiting_reply": sorted(set(owed.values()) & waiting),
+        "grants_without_purchase": dict(sorted(loose.items())),
+    }
+
+
 if __name__ == "__main__":
     print(json.dumps({
         "Q1 INC-2026-11-18-EU2": q1("INC-2026-11-18-EU2"),
@@ -143,5 +244,10 @@ if __name__ == "__main__":
         "Q2 T-1051": q2("T-1051"),
         "Q2 T-1045": q2("T-1045"),
         "Q2 T-1042 resolution": q2_resolution("T-1042"),
+        "Q2 T-1043 resolution": q2_resolution("T-1043"),
         "Q3 INC-2026-11-18-EU2": q3("INC-2026-11-18-EU2"),
+        "Q1 topics": q1_topics("INC-2026-11-18-EU2"),
+        "Q1 moment": q1_moment("INC-2026-11-18-EU2"),
+        "Q3 owed": q3_owed("INC-2026-11-18-EU2"),
+        "Q3 owed, no ledger": q3_owed("INC-2026-11-18-EU2", ledger=False),
     }, indent=2))
