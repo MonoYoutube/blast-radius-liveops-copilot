@@ -1,0 +1,282 @@
+{
+  "tickets": [
+    {
+      "ticket_id": "T-1030",
+      "requester_email": "aruzhan.k@example.com",
+      "requester_name": "Aruzhan K.",
+      "subject": "How do I change my nickname?",
+      "category": "account",
+      "status": "solved",
+      "priority": "low",
+      "created_at": "2026-11-12T09:10:00Z",
+      "tags": [
+        "nickname"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-12T09:10:00Z",
+          "text": "Hi, where can I change my in-game nickname?"
+        },
+        {
+          "author": "agent",
+          "at": "2026-11-12T09:42:00Z",
+          "text": "Settings > Profile > Nickname. One free change every 30 days."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1035",
+      "requester_email": "ines.d@example.com",
+      "requester_name": "Ines D.",
+      "subject": "Friend invite bonus missing",
+      "category": "rewards",
+      "status": "open",
+      "priority": "normal",
+      "created_at": "2026-11-18T18:45:00Z",
+      "tags": [
+        "referral"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-18T18:45:00Z",
+          "text": "My friend joined with my invite code yesterday but I did not get the bonus gems."
+        },
+        {
+          "author": "agent",
+          "at": "2026-11-18T19:30:00Z",
+          "text": "Thanks, we are checking the referral log and will get back to you."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1041",
+      "requester_email": "aruzhan.k@example.com",
+      "requester_name": "Aruzhan K.",
+      "subject": "Kicked from ranked match, lost rating",
+      "category": "gameplay",
+      "status": "open",
+      "priority": "normal",
+      "created_at": "2026-11-18T18:20:00Z",
+      "tags": [
+        "crash",
+        "ranked"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-18T18:20:00Z",
+          "text": "I was thrown out of a ranked match on EU-2 at about 18:12 UTC and lost rating points. Nickname NightOwl."
+        },
+        {
+          "author": "agent",
+          "at": "2026-11-18T18:40:00Z",
+          "text": "Sorry about that. We are investigating a server problem on EU-2 and will update you."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1042",
+      "requester_email": "t.sadykov@example.org",
+      "requester_name": "Timur S.",
+      "subject": "Battle Pass purchased but not received",
+      "category": "billing",
+      "status": "new",
+      "priority": "high",
+      "created_at": "2026-11-18T18:50:00Z",
+      "tags": [
+        "purchase"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-18T18:50:00Z",
+          "text": "I bought Battle Pass S7 around 18:40 UTC. My card was charged $9.99 but the pass is not in my inventory. Nickname: Frostbyte."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1043",
+      "requester_email": "marco.r@example.com",
+      "requester_name": "Marco R.",
+      "subject": "Charged for gems, nothing arrived",
+      "category": "billing",
+      "status": "new",
+      "priority": "high",
+      "created_at": "2026-11-18T18:58:00Z",
+      "tags": [
+        "purchase"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-18T18:58:00Z",
+          "text": "Paid $4.99 for 500 Gems a few minutes ago, the gems never showed up. Please fix or refund."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1044",
+      "requester_email": "dana.b@example.com",
+      "requester_name": "Dana B.",
+      "subject": "Game crashed mid-match",
+      "category": "gameplay",
+      "status": "solved",
+      "priority": "normal",
+      "created_at": "2026-11-18T19:22:00Z",
+      "tags": [
+        "crash"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-18T19:22:00Z",
+          "text": "The match just closed with a server error around 19:20 UTC."
+        },
+        {
+          "author": "agent",
+          "at": "2026-11-18T19:50:00Z",
+          "text": "This was a server incident on EU-2, now resolved. Your rating was not affected. Sorry for the trouble!"
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1045",
+      "requester_email": "ghost.player@example.net",
+      "requester_name": "ghost",
+      "subject": "EU-2 down?? lost my win streak",
+      "category": "gameplay",
+      "status": "new",
+      "priority": "normal",
+      "created_at": "2026-11-18T18:35:00Z",
+      "tags": [
+        "crash"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-18T18:35:00Z",
+          "text": "EU-2 keeps kicking me. Lost a 9 win streak. Fix your servers."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1047",
+      "requester_email": "jonas.h@example.com",
+      "requester_name": "Jonas H.",
+      "subject": "Charged twice for Battle Pass",
+      "category": "billing",
+      "status": "new",
+      "priority": "normal",
+      "created_at": "2026-11-18T20:30:00Z",
+      "tags": [
+        "purchase",
+        "double-charge"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-18T20:30:00Z",
+          "text": "I think I was charged twice for Battle Pass S7 this evening. Please refund the second charge. Nickname Kraken."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1048",
+      "requester_email": "aiko.n@example.com",
+      "requester_name": "Aiko N.",
+      "subject": "Login queue stuck",
+      "category": "gameplay",
+      "status": "solved",
+      "priority": "normal",
+      "created_at": "2026-11-05T12:10:00Z",
+      "tags": [
+        "login"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-05T12:10:00Z",
+          "text": "Stuck in the ASIA-1 login queue for ten minutes."
+        },
+        {
+          "author": "agent",
+          "at": "2026-11-05T12:50:00Z",
+          "text": "The queue problem is fixed, please try again. We added 100 Gems to your account."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1049",
+      "requester_email": "sara.l@example.com",
+      "requester_name": "Sara L.",
+      "subject": "Feature request: replay export",
+      "category": "feedback",
+      "status": "open",
+      "priority": "low",
+      "created_at": "2026-11-19T07:00:00Z",
+      "tags": [
+        "feature-request"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-19T07:00:00Z",
+          "text": "Would love to export match replays as video."
+        },
+        {
+          "author": "agent",
+          "at": "2026-11-19T08:15:00Z",
+          "text": "Thanks! Passed to the product team."
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1050",
+      "requester_email": "ravi.p@example.com",
+      "requester_name": "Ravi P.",
+      "subject": "Cannot link console account",
+      "category": "account",
+      "status": "pending",
+      "priority": "normal",
+      "created_at": "2026-11-16T14:05:00Z",
+      "tags": [
+        "linking"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-16T14:05:00Z",
+          "text": "Linking my console account fails with error 0x51."
+        },
+        {
+          "author": "agent",
+          "at": "2026-11-16T15:00:00Z",
+          "text": "Could you send a screenshot of the error screen?"
+        }
+      ]
+    },
+    {
+      "ticket_id": "T-1051",
+      "requester_email": "sara.l@example.com",
+      "requester_name": "Sara L.",
+      "subject": "Charged twice for Battle Pass",
+      "category": "billing",
+      "status": "new",
+      "priority": "normal",
+      "created_at": "2026-11-08T18:10:00Z",
+      "tags": [
+        "purchase",
+        "double-charge"
+      ],
+      "messages": [
+        {
+          "author": "customer",
+          "at": "2026-11-08T18:10:00Z",
+          "text": "My card statement shows two charges of $9.99 for Battle Pass S7 on November 8. I only bought it once. Nickname Echo."
+        }
+      ]
+    }
+  ]
+}

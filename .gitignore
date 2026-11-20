@@ -225,3 +225,12 @@ __marimo__/
 # Local environment and Synapse account configuration
 .env.*
 .synapse/
+
+# Project: keep env templates, ignore machine-specific and working files
+!.env.example
+collab/
+runs/
+*.prev
+mcp/claude_desktop_config.json
+mcp/hosted_servers.json
+synapse_auto_server_[0-9]*.py

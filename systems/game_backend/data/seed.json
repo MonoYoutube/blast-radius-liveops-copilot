@@ -1,0 +1,61 @@
+{
+  "players": [
+    {"player_id": "P-1001", "nickname": "NightOwl", "email": "aruzhan.k@example.com", "linked_emails": [], "region": "EU", "created_at": "2025-03-14T10:00:00Z"},
+    {"player_id": "P-1002", "nickname": "Frostbyte", "email": "timur.s@example.com", "linked_emails": ["t.sadykov@example.org"], "region": "EU", "created_at": "2025-01-20T08:30:00Z"},
+    {"player_id": "P-1003", "nickname": "Zephyr", "email": "lena.m@example.com", "linked_emails": [], "region": "EU", "created_at": "2025-06-02T19:45:00Z"},
+    {"player_id": "P-1004", "nickname": "IronTulip", "email": "marco.r@example.com", "linked_emails": [], "region": "EU", "created_at": "2024-11-11T11:11:00Z"},
+    {"player_id": "P-1005", "nickname": "Quasar", "email": "dana.b@example.com", "linked_emails": [], "region": "EU", "created_at": "2026-02-01T16:20:00Z"},
+    {"player_id": "P-1006", "nickname": "Pixelknight", "email": "oleg.v@example.com", "linked_emails": [], "region": "EU", "created_at": "2026-05-09T13:00:00Z"},
+    {"player_id": "P-1007", "nickname": "Saffron", "email": "mira.t@example.com", "linked_emails": [], "region": "EU", "created_at": "2025-09-27T07:15:00Z"},
+    {"player_id": "P-1008", "nickname": "Kraken", "email": "jonas.h@example.com", "linked_emails": [], "region": "EU", "created_at": "2025-12-30T22:05:00Z"},
+    {"player_id": "P-1009", "nickname": "Lumen", "email": "aiko.n@example.com", "linked_emails": [], "region": "ASIA", "created_at": "2025-04-18T03:40:00Z"},
+    {"player_id": "P-1010", "nickname": "Bishop", "email": "ravi.p@example.com", "linked_emails": [], "region": "ASIA", "created_at": "2026-01-07T05:55:00Z"},
+    {"player_id": "P-1011", "nickname": "Echo", "email": "sara.l@example.com", "linked_emails": [], "region": "NA", "created_at": "2025-08-08T18:00:00Z"},
+    {"player_id": "P-1012", "nickname": "Vortex", "email": "pablo.g@example.com", "linked_emails": [], "region": "NA", "created_at": "2026-03-21T21:30:00Z"},
+    {"player_id": "P-1013", "nickname": "Mistral", "email": "ines.d@example.com", "linked_emails": [], "region": "EU", "created_at": "2025-07-15T09:25:00Z"},
+    {"player_id": "P-1014", "nickname": "Tundra", "email": "erik.j@example.com", "linked_emails": [], "region": "EU", "created_at": "2026-06-30T14:10:00Z"}
+  ],
+  "incidents": [
+    {"incident_id": "INC-2026-11-18-EU2", "title": "EU-2 match servers crash loop", "server": "eu-2", "started_at": "2026-11-18T18:10:00Z", "ended_at": "2026-11-18T19:25:00Z", "status": "resolved", "summary": "Match servers on EU-2 crashed repeatedly. Store purchases made on EU-2 during the window were charged but the items were not delivered."},
+    {"incident_id": "INC-2026-11-05-ASIA1", "title": "ASIA-1 login queue stuck", "server": "asia-1", "started_at": "2026-11-05T12:00:00Z", "ended_at": "2026-11-05T12:40:00Z", "status": "resolved", "summary": "Players could not get past the login queue on ASIA-1."},
+    {"incident_id": "INC-2026-11-12-NA1", "title": "NA-1 matchmaking delays", "server": "na-1", "started_at": "2026-11-12T03:00:00Z", "ended_at": "2026-11-12T03:20:00Z", "status": "resolved", "summary": "Matchmaking on NA-1 was slow for 20 minutes. No matches were interrupted and no purchases failed."}
+  ],
+  "sessions": [
+    {"session_id": "S-3001", "player_id": "P-1001", "server": "eu-2", "started_at": "2026-11-18T17:50:00Z", "ended_at": "2026-11-18T18:12:04Z", "end_reason": "server_crash"},
+    {"session_id": "S-3002", "player_id": "P-1002", "server": "eu-2", "started_at": "2026-11-18T18:05:00Z", "ended_at": "2026-11-18T18:31:40Z", "end_reason": "server_crash"},
+    {"session_id": "S-3003", "player_id": "P-1003", "server": "eu-2", "started_at": "2026-11-18T18:20:00Z", "ended_at": "2026-11-18T18:47:12Z", "end_reason": "server_crash"},
+    {"session_id": "S-3004", "player_id": "P-1004", "server": "eu-2", "started_at": "2026-11-18T18:40:00Z", "ended_at": "2026-11-18T19:02:30Z", "end_reason": "server_crash"},
+    {"session_id": "S-3005", "player_id": "P-1005", "server": "eu-2", "started_at": "2026-11-18T19:00:00Z", "ended_at": "2026-11-18T19:20:05Z", "end_reason": "server_crash"},
+    {"session_id": "S-3006", "player_id": "P-1006", "server": "eu-2", "started_at": "2026-11-18T18:15:00Z", "ended_at": "2026-11-18T18:16:20Z", "end_reason": "server_crash"},
+    {"session_id": "S-3008", "player_id": "P-1008", "server": "eu-2", "started_at": "2026-11-18T19:40:00Z", "ended_at": "2026-11-18T20:30:00Z", "end_reason": "normal"},
+    {"session_id": "S-3009", "player_id": "P-1013", "server": "eu-1", "started_at": "2026-11-18T18:00:00Z", "ended_at": "2026-11-18T19:30:00Z", "end_reason": "normal"},
+    {"session_id": "S-3010", "player_id": "P-1014", "server": "eu-2", "started_at": "2026-11-18T16:00:00Z", "ended_at": "2026-11-18T17:30:00Z", "end_reason": "normal"},
+    {"session_id": "S-3011", "player_id": "P-1009", "server": "asia-1", "started_at": "2026-11-05T12:05:00Z", "ended_at": "2026-11-05T12:06:00Z", "end_reason": "login_timeout"},
+    {"session_id": "S-3012", "player_id": "P-1010", "server": "asia-1", "started_at": "2026-11-05T11:00:00Z", "ended_at": "2026-11-05T11:50:00Z", "end_reason": "normal"},
+    {"session_id": "S-3013", "player_id": "P-1011", "server": "na-1", "started_at": "2026-11-18T18:00:00Z", "ended_at": "2026-11-18T19:00:00Z", "end_reason": "normal"},
+    {"session_id": "S-3014", "player_id": "P-1012", "server": "na-1", "started_at": "2026-11-18T18:30:00Z", "ended_at": "2026-11-18T19:10:00Z", "end_reason": "normal"},
+    {"session_id": "S-3015", "player_id": "P-1001", "server": "eu-2", "started_at": "2026-11-17T20:00:00Z", "ended_at": "2026-11-17T21:00:00Z", "end_reason": "normal"},
+    {"session_id": "S-3016", "player_id": "P-1006", "server": "eu-2", "started_at": "2026-11-18T19:30:00Z", "ended_at": "2026-11-18T20:10:00Z", "end_reason": "normal"}
+  ],
+  "purchases": [
+    {"purchase_id": "PU-5001", "order_id": "O-7001", "player_id": "P-1002", "item": "Battle Pass S7", "amount_usd": 9.99, "created_at": "2026-11-18T18:41:10Z", "server": "eu-2", "status": "charged_not_delivered"},
+    {"purchase_id": "PU-5002", "order_id": "O-7002", "player_id": "P-1004", "item": "500 Gems", "amount_usd": 4.99, "created_at": "2026-11-18T18:55:00Z", "server": "eu-2", "status": "charged_not_delivered"},
+    {"purchase_id": "PU-5003", "order_id": "O-7003", "player_id": "P-1007", "item": "Legendary Skin: Ember", "amount_usd": 14.99, "created_at": "2026-11-18T18:52:30Z", "server": "eu-2", "status": "charged_not_delivered"},
+    {"purchase_id": "PU-5004", "order_id": "O-7004", "player_id": "P-1001", "item": "500 Gems", "amount_usd": 4.99, "created_at": "2026-11-17T10:00:00Z", "server": "eu-2", "status": "delivered"},
+    {"purchase_id": "PU-5005", "order_id": "O-7005", "player_id": "P-1008", "item": "Battle Pass S7", "amount_usd": 9.99, "created_at": "2026-11-18T20:05:00Z", "server": "eu-2", "status": "delivered"},
+    {"purchase_id": "PU-5006", "order_id": "O-7006", "player_id": "P-1013", "item": "1200 Gems", "amount_usd": 9.99, "created_at": "2026-11-18T18:30:00Z", "server": "eu-1", "status": "delivered"},
+    {"purchase_id": "PU-5007", "order_id": "O-7007", "player_id": "P-1003", "item": "Battle Pass S7", "amount_usd": 9.99, "created_at": "2026-11-10T15:20:00Z", "server": "eu-2", "status": "delivered"},
+    {"purchase_id": "PU-5008", "order_id": "O-7008", "player_id": "P-1009", "item": "500 Gems", "amount_usd": 4.99, "created_at": "2026-11-04T09:00:00Z", "server": "asia-1", "status": "delivered"},
+    {"purchase_id": "PU-5009", "order_id": "O-7009", "player_id": "P-1005", "item": "Starter Pack", "amount_usd": 1.99, "created_at": "2026-11-18T19:05:00Z", "server": "eu-2", "status": "payment_failed_not_charged"},
+    {"purchase_id": "PU-5010", "order_id": "O-7010", "player_id": "P-1002", "item": "500 Gems", "amount_usd": 4.99, "created_at": "2026-11-02T12:00:00Z", "server": "eu-2", "status": "delivered"},
+    {"purchase_id": "PU-5011", "order_id": "O-7011", "player_id": "P-1011", "item": "Battle Pass S7", "amount_usd": 9.99, "created_at": "2026-11-08T17:45:00Z", "server": "na-1", "status": "delivered"},
+    {"purchase_id": "PU-5012", "order_id": "O-7012", "player_id": "P-1007", "item": "1200 Gems", "amount_usd": 9.99, "created_at": "2026-11-01T08:10:00Z", "server": "eu-2", "status": "delivered"},
+    {"purchase_id": "PU-5013", "order_id": "O-7011", "player_id": "P-1011", "item": "Battle Pass S7", "amount_usd": 9.99, "created_at": "2026-11-08T17:45:04Z", "server": "na-1", "status": "delivered"}
+  ],
+  "compensations": [
+    {"compensation_id": "C-9001", "player_id": "P-1001", "incident_id": "INC-2026-11-18-EU2", "grant": "300 Gems", "reason": "match crash", "related_purchase_id": null, "granted_at": "2026-11-19T09:00:00Z", "granted_by": "auto-rule:crash-compensation"},
+    {"compensation_id": "C-9002", "player_id": "P-1003", "incident_id": "INC-2026-11-18-EU2", "grant": "300 Gems", "reason": "match crash", "related_purchase_id": null, "granted_at": "2026-11-19T09:00:00Z", "granted_by": "auto-rule:crash-compensation"},
+    {"compensation_id": "C-9003", "player_id": "P-1002", "incident_id": "INC-2026-11-18-EU2", "grant": "Battle Pass S7 re-delivery", "reason": "purchase charged but not delivered", "related_purchase_id": "PU-5001", "granted_at": "2026-11-19T10:15:00Z", "granted_by": "liveops:dmitry"},
+    {"compensation_id": "C-9004", "player_id": "P-1009", "incident_id": "INC-2026-11-05-ASIA1", "grant": "100 Gems", "reason": "login queue", "related_purchase_id": null, "granted_at": "2026-11-05T15:00:00Z", "granted_by": "auto-rule:queue-compensation"}
+  ]
+}

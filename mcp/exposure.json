@@ -1,0 +1,40 @@
+{
+  "game_backend": {
+    "path": "systems/game_backend",
+    "server_name": "kestrel-game-backend",
+    "namespace": "game",
+    "port": 8101,
+    "expose": [
+      {"endpoint": "GET /incidents", "why": "Entry point: lets the agent resolve 'the EU-2 outage' to an incident id and time window."},
+      {"endpoint": "GET /incidents/{incident_id}", "why": "Exact UTC window and server of one incident, needed to filter tickets by time."},
+      {"endpoint": "GET /incidents/{incident_id}/affected-players", "why": "System-of-record answer to 'who was hit', with every e-mail of each player for the cross-system join."},
+      {"endpoint": "GET /players/by-email/{email}", "why": "The only bridge from a support ticket (e-mail) to a player (id). Resolves linked e-mails too."},
+      {"endpoint": "GET /players/{player_id}", "why": "Profile lookup when the agent starts from a player id or nickname context."},
+      {"endpoint": "GET /players/{player_id}/purchases", "why": "Evidence for billing claims in tickets: what was charged, when, and whether it was delivered."}
+    ],
+    "withheld": [
+      {"endpoint": "POST /admin/reseed", "why": "Maintenance operation; an agent has no reason to reset data."},
+      {"endpoint": "DELETE /players/{player_id}", "why": "Irreversible erasure; must stay a human-only action."}
+    ],
+    "live_demo": [
+      {"endpoint": "GET /incidents/{incident_id}/compensations", "why": "Added live during the demo: shows who has already been compensated, so the agent stops recommending a second grant."}
+    ]
+  },
+  "support_desk": {
+    "path": "systems/support_desk",
+    "server_name": "kestrel-support-desk",
+    "namespace": "desk",
+    "port": 8102,
+    "expose": [
+      {"endpoint": "GET /tickets/{ticket_id}", "why": "Full conversation of one ticket: the claim the agent has to verify against the game backend."},
+      {"endpoint": "POST /tickets/search", "why": "One call for many e-mail addresses and a time filter, instead of one call per player. Keeps the join cheap and reliable."},
+      {"endpoint": "GET /requesters/{email}/tickets", "why": "Simple history of one requester when the agent follows a single person."},
+      {"endpoint": "GET /queues/awaiting-first-response", "why": "Who is still waiting for a first answer: the queue a support lead cares about during an incident."}
+    ],
+    "withheld": [
+      {"endpoint": "POST /tickets/{ticket_id}/replies", "why": "Customer-facing and cannot be unsent; the copilot drafts, a human sends."},
+      {"endpoint": "POST /admin/reseed", "why": "Maintenance operation."}
+    ],
+    "live_demo": []
+  }
+}
